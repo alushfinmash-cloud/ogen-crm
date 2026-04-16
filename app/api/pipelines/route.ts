@@ -14,7 +14,7 @@ export async function GET() {
     }
 
     // Get unique pipeline IDs
-    const uniqueIds = [...new Set((data || []).map(d => d.pipeline_id))]
+    const uniqueIds = Array.from(new Set((data || []).map(d => d.pipeline_id)))
 
     if (uniqueIds.length === 0) {
       return NextResponse.json([{ id: '00000000-0000-0000-0000-000000000001', name: 'ברירת מחדל' }])
