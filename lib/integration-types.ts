@@ -1,6 +1,6 @@
 export interface Integration {
   id: string
-  type: 'whatsapp' | 'gmail' | 'calendar'
+  type: 'whatsapp' | 'gmail' | 'calendar' | 'green_api'
   config: Record<string, string>
   is_active: boolean
   connected_at: string | null
@@ -70,6 +70,13 @@ export const INTEGRATION_INFO: Record<string, { label: string; icon: string; des
     description: 'יצירת פגישות וסינכרון לוח שנה',
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
+  },
+  green_api: {
+    label: 'Green API — WhatsApp',
+    icon: '🟢',
+    description: 'חיבור WhatsApp דרך Green API — שליחה וקבלה של הודעות',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-50',
   },
 }
 

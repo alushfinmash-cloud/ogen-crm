@@ -83,6 +83,14 @@ export default function IntegrationsPage() {
             onToggleExpand={() => setExpandedType(expandedType === 'calendar' ? null : 'calendar')}
             onReload={loadIntegrations}
           />
+          {/* Green API */}
+          <IntegrationCard
+            type="green_api"
+            integration={getIntegration('green_api')}
+            expanded={expandedType === 'green_api'}
+            onToggleExpand={() => setExpandedType(expandedType === 'green_api' ? null : 'green_api')}
+            onReload={loadIntegrations}
+          />
         </div>
       </div>
     </div>
@@ -136,6 +144,7 @@ function IntegrationCard({
           {type === 'whatsapp' && <WhatsAppConfig integration={integration} onReload={onReload} />}
           {type === 'gmail' && <GmailConfig integration={integration} onReload={onReload} />}
           {type === 'calendar' && <CalendarConfig integration={integration} onReload={onReload} />}
+          {type === 'green_api' && <GreenApiConfig integration={integration} onReload={onReload} />}
         </div>
       )}
     </div>
@@ -426,6 +435,162 @@ function GmailConfig({ integration, onReload }: { integration?: Integration; onR
               {v.key} — {v.label}
             </span>
           ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Green API Config ─── */
+function GreenApiConfig({ integration, onReload }: { integration?: Integration; onReload: () => void }) {
+  const config = (integration?.config || {}) as Record<string, string>
+  const [instanceId, setInstanceId] = useState(config.instance_id || '')
+  const [apiToken, setApiToken] = useState(config.api_token || '')
+  const [apiUrl, setApiUrl] = useState(config.api_url || '')
+  const [showToken, setShowToken] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
+
+  // Auto-fill API URL when instance ID changes
+  const handleInstanceIdChange = (val: string) => {
+    setInstanceId(val)
+    if (val.trim()) {
+      setApiUrl(`https://${val.trim()}.api.greenapi.com`)
+    } else {
+      setApiUrl('')
+    }
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    await fetch('/api/integrations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'green_api',
+        config: { instance_id: instanceId, api_token: apiToken, api_url: apiUrl },
+        is_active: true,
+      }),
+    })
+    await onReload()
+    setSaving(false)
+    setTestResult(null)
+  }
+
+  const handleDisconnect = async () => {
+    await fetch('/api/integrations?type=green_api', { method: 'DELETE' })
+    setInstanceId('')
+    setApiToken('')
+    setApiUrl('')
+    await onReload()
+  }
+
+  const handleTest = async () => {
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const url = apiUrl || `https://${instanceId}.api.greenapi.com`
+      const res = await fetch(`${url}/waInstance${instanceId}/getStateInstance/${apiToken}`)
+      const data = await res.json()
+      setTestResult(data?.stateInstance === 'authorized' ? 'success' : 'error')
+    } catch {
+      setTestResult('error')
+    }
+    setTesting(false)
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="p-3 bg-emerald-50 rounded-lg text-sm text-emerald-700">
+        💡 הזן את פרטי ה-Green API שלך. תמצא אותם ב-<a href="https://console.green-api.com" target="_blank" rel="noreferrer" className="underline font-medium">console.green-api.com</a>
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">Instance ID</label>
+          <input
+            type="text"
+            dir="ltr"
+            value={instanceId}
+            onChange={(e) => handleInstanceIdChange(e.target.value)}
+            placeholder="7103592740"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">API Token</label>
+          <div className="relative">
+            <input
+              type={showToken ? 'text' : 'password'}
+              dir="ltr"
+              value={apiToken}
+              onChange={(e) => setApiToken(e.target.value)}
+              placeholder="65a9c0594f54496b9d0025..."
+              className="w-full px-3 py-2 pe-10 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            <button onClick={() => setShowToken(!showToken)} className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400">
+              {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs text-slate-500 mb-1">API URL (ממולא אוטומטית)</label>
+          <input
+            type="text"
+            dir="ltr"
+            value={apiUrl}
+            onChange={(e) => setApiUrl(e.target.value)}
+            placeholder="https://7103592740.api.greenapi.com"
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500 bg-slate-50"
+          />
+        </div>
+      </div>
+
+      {testResult && (
+        <div className={`p-3 rounded-lg text-sm ${testResult === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          {testResult === 'success' ? '✅ החיבור הצליח! WhatsApp מחובר ומוכן.' : '❌ החיבור נכשל. בדוק שה-Instance ID והטוקן נכונים.'}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleSave}
+          disabled={saving || !instanceId || !apiToken}
+          className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white text-sm rounded-lg transition-colors"
+        >
+          <Link2 size={14} /> {saving ? 'שומר...' : 'שמור וחבר'}
+        </button>
+        <button
+          onClick={handleTest}
+          disabled={testing || !instanceId || !apiToken}
+          className="flex items-center gap-1.5 px-4 py-2 border border-slate-200 text-slate-600 text-sm rounded-lg hover:bg-slate-50 transition-colors"
+        >
+          <RefreshCw size={14} className={testing ? 'animate-spin' : ''} /> בדוק חיבור
+        </button>
+        {integration?.is_active && (
+          <button
+            onClick={handleDisconnect}
+            className="flex items-center gap-1.5 px-3 py-2 text-red-500 text-sm hover:bg-red-50 rounded-lg transition-colors me-auto"
+          >
+            <Unlink size={14} /> נתק
+          </button>
+        )}
+      </div>
+
+      <div className="pt-3 border-t border-slate-100 text-xs text-slate-400 space-y-1">
+        <p>📋 <strong>Webhook URL</strong> להגדרה ב-Green API Console:</p>
+        <div className="flex items-center gap-2">
+          <code className="bg-slate-100 px-2 py-1 rounded text-slate-600 text-xs flex-1 break-all" dir="ltr">
+            https://ogen-crm-git-main-natanel-alushs-projects-27754552.vercel.app/api/inbox/webhook
+          </code>
+          <button
+            onClick={() => navigator.clipboard.writeText('https://ogen-crm-git-main-natanel-alushs-projects-27754552.vercel.app/api/inbox/webhook')}
+            className="text-slate-400 hover:text-slate-600 flex-shrink-0"
+            title="העתק"
+          >
+            <Copy size={14} />
+          </button>
         </div>
       </div>
     </div>
