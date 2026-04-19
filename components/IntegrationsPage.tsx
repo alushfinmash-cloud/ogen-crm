@@ -452,6 +452,14 @@ function GreenApiConfig({ integration, onReload }: { integration?: Integration; 
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
 
+  // Sync fields when integration loads from DB
+  useEffect(() => {
+    const c = (integration?.config || {}) as Record<string, string>
+    if (c.instance_id) setInstanceId(c.instance_id)
+    if (c.api_token) setApiToken(c.api_token)
+    if (c.api_url) setApiUrl(c.api_url)
+  }, [integration])
+
   // Auto-fill API URL when instance ID changes
   const handleInstanceIdChange = (val: string) => {
     setInstanceId(val)
