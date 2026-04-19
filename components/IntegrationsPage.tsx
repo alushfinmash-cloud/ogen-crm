@@ -490,10 +490,13 @@ function GreenApiConfig({ integration, onReload }: { integration?: Integration; 
     setTesting(true)
     setTestResult(null)
     try {
-      const url = apiUrl || `https://${instanceId}.api.greenapi.com`
-      const res = await fetch(`${url}/waInstance${instanceId}/getStateInstance/${apiToken}`)
+      const res = await fetch('/api/integrations/green-api/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instance_id: instanceId, api_token: apiToken, api_url: apiUrl }),
+      })
       const data = await res.json()
-      setTestResult(data?.stateInstance === 'authorized' ? 'success' : 'error')
+      setTestResult(data?.success ? 'success' : 'error')
     } catch {
       setTestResult('error')
     }
